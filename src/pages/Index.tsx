@@ -2,6 +2,7 @@ import { ProjectionProvider } from "@/contexts/ProjectionContext";
 import { TopBar } from "@/components/TopBar";
 import { ServicePanel } from "@/components/ServicePanel";
 import { LibraryPanel } from "@/components/LibraryPanel";
+import { ListeningPanel } from "@/components/ListeningPanel";
 import { SlideArea } from "@/components/SlideArea";
 import { LiveOutput } from "@/components/LiveOutput";
 
@@ -11,12 +12,12 @@ const Index = () => {
       <div className="h-screen flex flex-col overflow-hidden">
         <TopBar />
         <div className="flex-1 flex overflow-hidden">
-          {/* Left sidebar - Service Order + Library */}
+          {/* Left sidebar - Listening + Library */}
           <div className="w-64 shrink-0 flex flex-col border-r border-border">
             <div className="flex-1 overflow-hidden">
-              <ServicePanel />
+              <ListeningPanel />
             </div>
-            <div className="h-80 border-t border-border overflow-hidden">
+            <div className="h-72 border-t border-border overflow-hidden">
               <LibraryPanel />
             </div>
           </div>

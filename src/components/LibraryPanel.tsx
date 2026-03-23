@@ -1,21 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Plus, Book, Music } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { searchBibleVerses, getVerseDisplay } from "@/lib/bible-data";
+import { searchBibleVerses, getVerseDisplay, loadBible, type BibleVerse } from "@/lib/bible-data";
 import { searchSongs, type Song } from "@/lib/song-data";
 import { useProjection } from "@/contexts/ProjectionContext";
 import { ServiceItem, SlideData } from "@/lib/service-types";
 
 export function LibraryPanel() {
   const [search, setSearch] = useState("");
+  const [bibleLoaded, setBibleLoaded] = useState(false);
   const { addServiceItem } = useProjection();
 
-  const bibleResults = searchBibleVerses(search);
+  useEffect(() => {
+    loadBible().then(() => setBibleLoaded(true));
+  }, []);
+
+  const bibleResults = bibleLoaded ? searchBibleVerses(search) : [];
   const songResults = searchSongs(search);
 
-  const addScripture = (book: string, chapter: number, verses: typeof bibleResults) => {
+  const addScripture = (bookName: string, chapter: number, verses: BibleVerse[]) => {
     const slides: SlideData[] = verses.map((v) => ({
       id: crypto.randomUUID(),
       title: "",
@@ -25,7 +30,7 @@ export function LibraryPanel() {
     const item: ServiceItem = {
       id: crypto.randomUUID(),
       type: "scripture",
-      title: `${book} ${chapter}`,
+      title: `${bookName} ${chapter}`,
       subtitle: `${verses.length} verse${verses.length > 1 ? "s" : ""}`,
       slides,
     };
@@ -51,8 +56,8 @@ export function LibraryPanel() {
   };
 
   // Group bible results by book+chapter
-  const groupedVerses = bibleResults.reduce<Record<string, typeof bibleResults>>((acc, v) => {
-    const key = `${v.book} ${v.chapter}`;
+  const groupedVerses = bibleResults.reduce<Record<string, BibleVerse[]>>((acc, v) => {
+    const key = `${v.book_name} ${v.chapter}`;
     (acc[key] = acc[key] || []).push(v);
     return acc;
   }, {});
@@ -61,6 +66,7 @@ export function LibraryPanel() {
     <div className="panel flex flex-col h-full">
       <div className="panel-header">
         <span className="panel-header-title">Library</span>
+        {!bibleLoaded && <span className="text-[9px] text-muted-foreground">Loading KJV...</span>}
       </div>
       <div className="p-2">
         <div className="relative">
@@ -98,13 +104,13 @@ export function LibraryPanel() {
                     size="sm"
                     variant="ghost"
                     className="h-6 text-xs gap-1 text-primary"
-                    onClick={() => addScripture(verses[0].book, verses[0].chapter, verses)}
+                    onClick={() => addScripture(verses[0].book_name, verses[0].chapter, verses)}
                   >
                     <Plus className="w-3 h-3" /> Add All
                   </Button>
                 </div>
                 {verses.map((v) => (
-                  <div key={`${v.book}${v.chapter}:${v.verse}`} className="text-xs text-muted-foreground mb-1 pl-2 border-l border-border">
+                  <div key={`${v.book_name}${v.chapter}:${v.verse}`} className="text-xs text-muted-foreground mb-1 pl-2 border-l border-border">
                     <span className="text-foreground font-medium">v{v.verse}</span> {v.text.slice(0, 80)}...
                   </div>
                 ))}
