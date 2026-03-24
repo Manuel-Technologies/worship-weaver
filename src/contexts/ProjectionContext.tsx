@@ -51,6 +51,7 @@ export function ProjectionProvider({ children }: { children: React.ReactNode }) 
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLive, setIsLive] = useState(false);
   const [liveSlide, setLiveSlide] = useState<SlideData | null>(null);
+  const [liveScripture, setLiveScripture] = useState<LiveScriptureState | null>(null);
   const projectionWindowRef = useRef<Window | null>(null);
 
   const currentSlide = serviceItems[currentItemIndex]?.slides[currentSlideIndex] || null;
@@ -61,6 +62,59 @@ export function ProjectionProvider({ children }: { children: React.ReactNode }) 
       win.postMessage({ type: "SLIDE_UPDATE", slide }, "*");
     }
   }, []);
+
+  const makeVerseSlide = useCallback((verse: BibleVerse): SlideData => ({
+    id: crypto.randomUUID(),
+    title: "",
+    reference: `${verse.book_name} ${verse.chapter}:${verse.verse}`,
+    bodyLines: [`${verse.text}`],
+  }), []);
+
+  const goLiveScripture = useCallback((ref: BibleReference) => {
+    const verses = getVersesByReference({ ...ref, verseEnd: undefined });
+    const singleVerse = verses.length > 0 ? verses[0] : null;
+    if (!singleVerse) return;
+
+    setLiveScripture({ book: ref.book, chapter: ref.chapter, currentVerse: ref.verseStart });
+    const slide = makeVerseSlide(singleVerse);
+    setIsLive(true);
+    setLiveSlide(slide);
+    broadcastSlide(slide);
+  }, [broadcastSlide, makeVerseSlide]);
+
+  const nextVerse = useCallback(() => {
+    if (!liveScripture) return;
+    const next = liveScripture.currentVerse + 1;
+    const allVerses = getLoadedVerses();
+    const verse = allVerses.find(
+      (v) => v.book_name.toLowerCase() === liveScripture.book.toLowerCase() &&
+        v.chapter === liveScripture.chapter && v.verse === next
+    );
+    if (!verse) return;
+    setLiveScripture((prev) => prev ? { ...prev, currentVerse: next } : null);
+    const slide = makeVerseSlide(verse);
+    setLiveSlide(slide);
+    broadcastSlide(slide);
+  }, [liveScripture, broadcastSlide, makeVerseSlide]);
+
+  const prevVerse = useCallback(() => {
+    if (!liveScripture || liveScripture.currentVerse <= 1) return;
+    const prev = liveScripture.currentVerse - 1;
+    const allVerses = getLoadedVerses();
+    const verse = allVerses.find(
+      (v) => v.book_name.toLowerCase() === liveScripture.book.toLowerCase() &&
+        v.chapter === prev ? v.chapter === liveScripture.chapter : false && v.verse === prev
+    );
+    const correctVerse = allVerses.find(
+      (v) => v.book_name.toLowerCase() === liveScripture.book.toLowerCase() &&
+        v.chapter === liveScripture.chapter && v.verse === prev
+    );
+    if (!correctVerse) return;
+    setLiveScripture((p) => p ? { ...p, currentVerse: prev } : null);
+    const slide = makeVerseSlide(correctVerse);
+    setLiveSlide(slide);
+    broadcastSlide(slide);
+  }, [liveScripture, broadcastSlide, makeVerseSlide]);
 
   const addServiceItem = useCallback((item: ServiceItem) => {
     setServiceItems((prev) => [...prev, item]);
