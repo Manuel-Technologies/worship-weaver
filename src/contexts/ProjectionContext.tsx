@@ -63,6 +63,13 @@ export function ProjectionProvider({ children }: { children: React.ReactNode }) 
     }
   }, []);
 
+  const broadcastDisplaySettings = useCallback((settings: any) => {
+    const win = projectionWindowRef.current;
+    if (win && !win.closed) {
+      win.postMessage({ type: "DISPLAY_SETTINGS_UPDATE", settings }, "*");
+    }
+  }, []);
+
   const makeVerseSlide = useCallback((verse: BibleVerse): SlideData => ({
     id: crypto.randomUUID(),
     title: "",
