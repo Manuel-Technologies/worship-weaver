@@ -2,14 +2,42 @@ import { useState, useCallback, useEffect } from "react";
 import { Mic, MicOff, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
-import { detectReferencesInText, getVersesByReference, getVerseDisplay, loadBible, type BibleReference } from "@/lib/bible-data";
+import { detectReferencesInText, getVersesByReference, loadBible, type BibleReference } from "@/lib/bible-data";
 import { useProjection } from "@/contexts/ProjectionContext";
 import { SlideData } from "@/lib/service-types";
 
+const VOICE_COMMANDS: Record<string, string> = {
+  "next verse": "NEXT_VERSE",
+  "go to next verse": "NEXT_VERSE",
+  "move to next verse": "NEXT_VERSE",
+  "the next verse": "NEXT_VERSE",
+  "read the next verse": "NEXT_VERSE",
+  "continue": "NEXT_VERSE",
+  "next": "NEXT_VERSE",
+  "previous verse": "PREV_VERSE",
+  "go back": "PREV_VERSE",
+  "go to previous verse": "PREV_VERSE",
+  "last verse": "PREV_VERSE",
+  "back": "PREV_VERSE",
+  "clear screen": "BLACK",
+  "black out": "BLACK",
+  "blank screen": "BLACK",
+  "clear": "BLACK",
+};
+
+function detectVoiceCommand(text: string): string | null {
+  const t = text.toLowerCase().trim();
+  for (const [phrase, cmd] of Object.entries(VOICE_COMMANDS)) {
+    if (t.includes(phrase)) return cmd;
+  }
+  return null;
+}
+
 export function ListeningPanel() {
   const [detectedRefs, setDetectedRefs] = useState<{ ref: BibleReference; time: Date }[]>([]);
+  const [commandLog, setCommandLog] = useState<{ cmd: string; time: Date }[]>([]);
   const [bibleReady, setBibleReady] = useState(false);
-  const { goLive } = useProjection();
+  const { goLive, goLiveScripture, nextVerse, prevVerse, goBlack } = useProjection();
 
   useEffect(() => {
     loadBible().then(() => setBibleReady(true));
@@ -17,6 +45,25 @@ export function ListeningPanel() {
 
   const handleTranscript = useCallback((text: string) => {
     if (!bibleReady) return;
+
+    // Check for voice commands first
+    const cmd = detectVoiceCommand(text);
+    if (cmd) {
+      setCommandLog((prev) => [...prev.slice(-4), { cmd, time: new Date() }]);
+      switch (cmd) {
+        case "NEXT_VERSE":
+          nextVerse();
+          return;
+        case "PREV_VERSE":
+          prevVerse();
+          return;
+        case "BLACK":
+          goBlack();
+          return;
+      }
+    }
+
+    // Then check for Bible references
     const refs = detectReferencesInText(text);
     if (refs.length === 0) return;
 
@@ -26,18 +73,10 @@ export function ListeningPanel() {
 
       setDetectedRefs((prev) => [...prev.slice(-9), { ref, time: new Date() }]);
 
-      // Auto-project the first verse
-      const slide: SlideData = {
-        id: crypto.randomUUID(),
-        title: "",
-        reference: ref.verseEnd
-          ? `${ref.book} ${ref.chapter}:${ref.verseStart}-${ref.verseEnd}`
-          : `${ref.book} ${ref.chapter}:${ref.verseStart}`,
-        bodyLines: verses.map((v) => `${v.verse}. ${v.text}`),
-      };
-      goLive(slide);
+      // Project the first verse and track scripture state
+      goLiveScripture(ref);
     }
-  }, [bibleReady, goLive]);
+  }, [bibleReady, goLiveScripture, nextVerse, prevVerse, goBlack]);
 
   const { isListening, transcript, interimTranscript, startListening, stopListening, isSupported } = useSpeechRecognition(handleTranscript);
 
@@ -76,6 +115,27 @@ export function ListeningPanel() {
         )}
       </div>
 
+      {/* Voice commands hint */}
+      <div className="px-2 pb-1">
+        <div className="text-[8px] text-muted-foreground bg-secondary rounded px-2 py-1">
+          <span className="font-semibold">Voice:</span> "next verse", "previous verse", "go back", "clear screen"
+        </div>
+      </div>
+
+      {/* Command log */}
+      {commandLog.length > 0 && (
+        <div className="px-2 pb-1">
+          {commandLog.slice().reverse().slice(0, 3).map((c, i) => (
+            <div key={i} className="text-[9px] text-success flex items-center gap-1">
+              <span>✓ {c.cmd.replace("_", " ")}</span>
+              <span className="text-muted-foreground ml-auto">
+                {c.time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Live transcript */}
       {(transcript || interimTranscript) && (
         <div className="px-2 pb-2">
@@ -97,19 +157,7 @@ export function ListeningPanel() {
             <div
               key={i}
               className="flex items-center gap-2 text-xs p-1.5 rounded bg-secondary mb-1 cursor-pointer hover:bg-secondary/80"
-              onClick={() => {
-                const verses = getVersesByReference(d.ref);
-                if (verses.length === 0) return;
-                const slide: SlideData = {
-                  id: crypto.randomUUID(),
-                  title: "",
-                  reference: d.ref.verseEnd
-                    ? `${d.ref.book} ${d.ref.chapter}:${d.ref.verseStart}-${d.ref.verseEnd}`
-                    : `${d.ref.book} ${d.ref.chapter}:${d.ref.verseStart}`,
-                  bodyLines: verses.map((v) => `${v.verse}. ${v.text}`),
-                };
-                goLive(slide);
-              }}
+              onClick={() => goLiveScripture(d.ref)}
             >
               <Volume2 className="w-3 h-3 text-primary shrink-0" />
               <span className="font-medium text-primary">
@@ -130,7 +178,7 @@ export function ListeningPanel() {
             <Mic className="w-6 h-6 mx-auto mb-2 opacity-30" />
             <p>Click "Start Listening" to detect</p>
             <p>Bible references from the pastor</p>
-            <p className="mt-2 text-[9px]">Scriptures will auto-project to HDMI</p>
+            <p className="mt-2 text-[9px]">Say "next verse" to advance</p>
           </div>
         </div>
       )}
