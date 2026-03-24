@@ -147,6 +147,13 @@ export function ProjectionProvider({ children }: { children: React.ReactNode }) 
     setIsLive(true);
     setLiveSlide(slide);
     broadcastSlide(slide);
+    // Track scripture context from the slide reference
+    if (slide.reference) {
+      const match = slide.reference.match(/^(.+?)\s+(\d+):(\d+)/);
+      if (match) {
+        setLiveScripture({ book: match[1], chapter: parseInt(match[2]), currentVerse: parseInt(match[3]) });
+      }
+    }
   }, [broadcastSlide]);
 
   const goBlack = useCallback(() => {
