@@ -79,6 +79,24 @@ export function getAllBooks(): string[] {
   return [...new Set(verses.map((v) => v.book_name))];
 }
 
+export function getChaptersForBook(bookName: string): number[] {
+  const verses = getLoadedVerses();
+  const chapters = new Set<number>();
+  for (const v of verses) {
+    if (v.book_name.toLowerCase() === bookName.toLowerCase()) {
+      chapters.add(v.chapter);
+    }
+  }
+  return [...chapters].sort((a, b) => a - b);
+}
+
+export function getVersesForChapter(bookName: string, chapter: number): BibleVerse[] {
+  const verses = getLoadedVerses();
+  return verses.filter(
+    (v) => v.book_name.toLowerCase() === bookName.toLowerCase() && v.chapter === chapter
+  );
+}
+
 // Book name aliases for speech recognition matching
 const BOOK_ALIASES: Record<string, string> = {
   "gen": "Genesis", "genesis": "Genesis",
