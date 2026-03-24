@@ -1,5 +1,12 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
 import { ServiceItem, SlideData, createBlackSlide } from "@/lib/service-types";
+import { BibleReference, getVersesByReference, getLoadedVerses, BibleVerse } from "@/lib/bible-data";
+
+export interface LiveScriptureState {
+  book: string;
+  chapter: number;
+  currentVerse: number;
+}
 
 interface ProjectionState {
   serviceItems: ServiceItem[];
@@ -7,6 +14,7 @@ interface ProjectionState {
   currentSlideIndex: number;
   isLive: boolean;
   projectionWindow: Window | null;
+  liveScripture: LiveScriptureState | null;
 }
 
 interface ProjectionContextType extends ProjectionState {
@@ -17,7 +25,10 @@ interface ProjectionContextType extends ProjectionState {
   selectItem: (index: number) => void;
   selectSlide: (itemIndex: number, slideIndex: number) => void;
   goLive: (slide: SlideData) => void;
+  goLiveScripture: (ref: BibleReference) => void;
   goBlack: () => void;
+  nextVerse: () => void;
+  prevVerse: () => void;
   nextSlide: () => void;
   prevSlide: () => void;
   openProjectionWindow: () => void;
