@@ -5,10 +5,11 @@ interface SlidePreviewProps {
   isActive?: boolean;
   isLive?: boolean;
   onClick?: () => void;
+  onDoubleClick?: () => void;
   size?: "sm" | "md" | "lg";
 }
 
-export function SlidePreview({ slide, isActive, isLive, onClick, size = "sm" }: SlidePreviewProps) {
+export function SlidePreview({ slide, isActive, isLive, onClick, onDoubleClick, size = "sm" }: SlidePreviewProps) {
   const sizeClasses = {
     sm: "w-full aspect-video",
     md: "w-full aspect-video",
@@ -26,6 +27,7 @@ export function SlidePreview({ slide, isActive, isLive, onClick, size = "sm" }: 
   return (
     <div
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
       className={`slide-thumbnail ${sizeClasses[size]} relative ${
         isActive ? "slide-thumbnail-active" : "slide-thumbnail-inactive"
       }`}
