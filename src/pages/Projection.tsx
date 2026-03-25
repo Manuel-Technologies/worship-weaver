@@ -78,17 +78,19 @@ const ProjectionPage = () => {
       </div>
 
       {/* AmboPro Watermark */}
-      <div
-        className="absolute bottom-6 right-8 z-20 select-none pointer-events-none"
-        style={{
-          fontSize: "28px",
-          fontWeight: 900,
-          letterSpacing: "0.15em",
-          color: "rgba(255, 255, 255, 0.12)",
-          textTransform: "uppercase",
-        }}
-      >
-        AmboPro
+      <div className="absolute bottom-6 right-8 z-20 select-none pointer-events-none flex items-center gap-2">
+        <img src="/favicon.png" alt="" className="h-6 w-6 object-contain" style={{ opacity: 0.18 }} />
+        <span
+          style={{
+            fontSize: "28px",
+            fontWeight: 900,
+            letterSpacing: "0.15em",
+            color: "rgba(255, 255, 255, 0.12)",
+            textTransform: "uppercase",
+          }}
+        >
+          AmboPro
+        </span>
       </div>
     </div>
   );
