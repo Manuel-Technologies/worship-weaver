@@ -9,7 +9,7 @@ interface SlidePreviewProps {
   size?: "sm" | "md" | "lg";
 }
 
-export function SlidePreview({ slide, isActive, isLive, onClick, size = "sm" }: SlidePreviewProps) {
+export function SlidePreview({ slide, isActive, isLive, onClick, onDoubleClick, size = "sm" }: SlidePreviewProps) {
   const sizeClasses = {
     sm: "w-full aspect-video",
     md: "w-full aspect-video",
