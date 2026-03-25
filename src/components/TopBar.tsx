@@ -4,6 +4,7 @@ import { useProjection } from "@/contexts/ProjectionContext";
 import { useDisplaySettings } from "@/contexts/DisplaySettingsContext";
 import { DisplaySettingsPanel } from "@/components/DisplaySettingsPanel";
 import { useState, useEffect } from "react";
+import amboProLogo from "@/assets/ambopro-logo.png";
 
 export function TopBar() {
   const { openProjectionWindow, isLive, goBlack, liveScripture, nextVerse, prevVerse } = useProjection();
@@ -14,13 +15,8 @@ export function TopBar() {
       <header className="h-12 border-b border-border flex items-center justify-between px-4 bg-sidebar-background">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">A</span>
-            </div>
-            <div>
-              <h1 className="text-sm font-bold tracking-tight">AmboPro</h1>
-              <p className="text-[9px] text-muted-foreground -mt-0.5">Church Projection Software</p>
-            </div>
+            <img src={amboProLogo} alt="AmboPro" className="h-7 w-7 object-contain" />
+            <h1 className="text-sm font-bold tracking-tight">AmboPro</h1>
           </div>
         </div>
 
