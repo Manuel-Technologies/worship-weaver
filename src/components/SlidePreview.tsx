@@ -27,6 +27,7 @@ export function SlidePreview({ slide, isActive, isLive, onClick, onDoubleClick, 
   return (
     <div
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
       className={`slide-thumbnail ${sizeClasses[size]} relative ${
         isActive ? "slide-thumbnail-active" : "slide-thumbnail-inactive"
       }`}
