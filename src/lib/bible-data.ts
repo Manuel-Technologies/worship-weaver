@@ -16,22 +16,81 @@ export interface BibleReference {
 let versesCache: BibleVerse[] | null = null;
 let loadingPromise: Promise<BibleVerse[]> | null = null;
 
+const DB_NAME = "ambopro-bible";
+const DB_VERSION = 1;
+const STORE_NAME = "verses";
+
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function getCachedVerses(): Promise<BibleVerse[] | null> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get("kjv");
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function setCachedVerses(verses: BibleVerse[]): Promise<void> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(verses, "kjv");
+  } catch {
+    // silent fail — cache is optional
+  }
+}
+
+function parseVerses(data: any): BibleVerse[] {
+  return data.verses.map((v: any) => ({
+    book_name: v.book_name,
+    book: v.book,
+    chapter: v.chapter,
+    verse: v.verse,
+    text: v.text.replace(/^¶\s*/, ""),
+  }));
+}
+
 export async function loadBible(): Promise<BibleVerse[]> {
   if (versesCache) return versesCache;
   if (loadingPromise) return loadingPromise;
 
-  loadingPromise = fetch("/kjv.json")
-    .then((r) => r.json())
-    .then((data) => {
-      versesCache = data.verses.map((v: any) => ({
-        book_name: v.book_name,
-        book: v.book,
-        chapter: v.chapter,
-        verse: v.verse,
-        text: v.text.replace(/^¶\s*/, ""), // strip pilcrow marks
-      }));
-      return versesCache!;
-    });
+  loadingPromise = (async () => {
+    // Try IndexedDB cache first (instant, works offline)
+    const cached = await getCachedVerses();
+    if (cached && cached.length > 0) {
+      versesCache = cached;
+      return versesCache;
+    }
+
+    // Fetch from network
+    const res = await fetch("/kjv.json");
+    const data = await res.json();
+    versesCache = parseVerses(data);
+
+    // Cache for next time (fire and forget)
+    setCachedVerses(versesCache);
+
+    return versesCache;
+  })();
 
   return loadingPromise;
 }
