@@ -69,6 +69,7 @@ export function SlideArea() {
                   isActive={idx === currentSlideIndex}
                   isLive={liveSlide?.id === slide.id}
                   onClick={() => selectSlide(currentItemIndex, idx)}
+                  onDoubleClick={() => goLive(slide)}
                   size="sm"
                 />
               </div>

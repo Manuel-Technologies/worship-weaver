@@ -5,6 +5,7 @@ interface SlidePreviewProps {
   isActive?: boolean;
   isLive?: boolean;
   onClick?: () => void;
+  onDoubleClick?: () => void;
   size?: "sm" | "md" | "lg";
 }
 
