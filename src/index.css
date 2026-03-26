@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,54 +6,56 @@
 
 @layer base {
   :root {
-    --background: 225 15% 10%;
-    --foreground: 210 20% 92%;
+    --background: 222 47% 8%;
+    --foreground: 40 20% 92%;
 
-    --card: 225 15% 13%;
-    --card-foreground: 210 20% 92%;
+    --card: 222 40% 11%;
+    --card-foreground: 40 20% 92%;
 
-    --popover: 225 15% 15%;
-    --popover-foreground: 210 20% 92%;
+    --popover: 222 40% 13%;
+    --popover-foreground: 40 20% 92%;
 
-    --primary: 210 100% 55%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 40 90% 52%;
+    --primary-foreground: 222 47% 8%;
 
-    --secondary: 225 15% 18%;
-    --secondary-foreground: 210 20% 85%;
+    --secondary: 222 30% 15%;
+    --secondary-foreground: 40 15% 78%;
 
-    --muted: 225 12% 16%;
-    --muted-foreground: 215 12% 55%;
+    --muted: 222 25% 14%;
+    --muted-foreground: 220 15% 50%;
 
-    --accent: 38 95% 55%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 40 90% 52%;
+    --accent-foreground: 222 47% 8%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 225 12% 20%;
-    --input: 225 12% 20%;
-    --ring: 210 100% 55%;
+    --border: 222 25% 16%;
+    --input: 222 25% 16%;
+    --ring: 40 90% 52%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
 
-    --sidebar-background: 225 15% 8%;
-    --sidebar-foreground: 210 20% 85%;
-    --sidebar-primary: 210 100% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 225 15% 15%;
-    --sidebar-accent-foreground: 210 20% 92%;
-    --sidebar-border: 225 12% 18%;
-    --sidebar-ring: 210 100% 55%;
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 220 15% 55%;
+    --sidebar-primary: 40 90% 52%;
+    --sidebar-primary-foreground: 222 47% 8%;
+    --sidebar-accent: 222 40% 12%;
+    --sidebar-accent-foreground: 40 20% 92%;
+    --sidebar-border: 222 25% 14%;
+    --sidebar-ring: 40 90% 52%;
 
     /* Custom tokens */
     --live: 0 85% 55%;
     --live-foreground: 0 0% 100%;
-    --success: 142 72% 45%;
+    --success: 155 72% 45%;
     --success-foreground: 0 0% 100%;
-    --slide-bg: 225 20% 6%;
+    --slide-bg: 222 50% 5%;
     --slide-text: 0 0% 100%;
-    --panel-header: 225 15% 12%;
+    --panel-header: 222 40% 10%;
     --projection-bg: 0 0% 0%;
+    --gold: 40 90% 52%;
+    --gold-muted: 40 50% 35%;
   }
 }
 
@@ -63,7 +65,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
   }
   code, .font-mono {
     font-family: 'JetBrains Mono', monospace;
@@ -75,45 +77,83 @@
     @apply bg-card rounded-lg border border-border;
   }
   .panel-header {
-    @apply px-3 py-2 border-b border-border flex items-center justify-between;
+    @apply px-3 py-2.5 border-b border-border flex items-center justify-between;
     background: hsl(var(--panel-header));
   }
   .panel-header-title {
-    @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+    @apply text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground;
   }
   .slide-thumbnail {
-    @apply rounded-md overflow-hidden cursor-pointer transition-all duration-150 border-2;
+    @apply rounded-lg overflow-hidden cursor-pointer transition-all duration-150 border-2;
   }
   .slide-thumbnail-active {
     @apply border-primary shadow-lg;
-    box-shadow: 0 0 12px hsl(var(--primary) / 0.4);
+    box-shadow: 0 0 16px hsl(var(--primary) / 0.3);
   }
   .slide-thumbnail-inactive {
-    @apply border-transparent hover:border-primary/40;
+    @apply border-transparent hover:border-primary/30;
   }
   .live-badge {
-    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-[0.15em];
     background: hsl(var(--live));
     color: hsl(var(--live-foreground));
     animation: pulse-live 2s ease-in-out infinite;
   }
   .service-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer transition-colors;
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-150;
   }
   .service-item:hover {
     @apply bg-secondary;
   }
   .service-item-active {
-    @apply bg-primary/15 border-l-2 border-primary;
+    @apply bg-primary/10 border-l-2 border-primary;
   }
   .projection-slide {
     @apply flex flex-col items-center justify-center text-center;
     background: hsl(var(--projection-bg));
     color: hsl(var(--slide-text));
   }
+
+  /* Sidebar nav icon button */
+  .sidebar-nav-item {
+    @apply flex flex-col items-center gap-1 py-3 px-1 rounded-lg cursor-pointer transition-all duration-200 text-muted-foreground;
+  }
+  .sidebar-nav-item:hover {
+    @apply text-foreground bg-secondary;
+  }
+  .sidebar-nav-item.active {
+    @apply text-primary bg-primary/10;
+  }
+  .sidebar-nav-item .nav-label {
+    @apply text-[8px] font-semibold uppercase tracking-wider;
+  }
+
+  /* Gold accent text */
+  .text-gold {
+    color: hsl(var(--gold));
+  }
+  .text-gold-muted {
+    color: hsl(var(--gold-muted));
+  }
 }
 
 @keyframes pulse-live {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
 }

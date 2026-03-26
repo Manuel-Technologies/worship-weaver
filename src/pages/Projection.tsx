@@ -45,51 +45,91 @@ const ProjectionPage = () => {
     >
       {/* Dark overlay for background images */}
       {displaySettings.backgroundImage && (
-        <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.55)" }} />
+        <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.5)" }} />
       )}
 
       {/* Content */}
       <div className="relative z-10 max-w-5xl w-full">
-        {slide.reference && (
-          <div
-            className="font-semibold mb-4"
-            style={{ color: "hsl(210, 100%, 55%)", fontSize: Math.round(displaySettings.fontSize * 0.5) }}
-          >
-            {slide.reference}
-          </div>
-        )}
-        {slide.title && (
-          <div
-            className="font-bold mb-6 uppercase tracking-wider"
-            style={{ color: "rgba(255,255,255,0.6)", fontSize: Math.round(displaySettings.fontSize * 0.45) }}
-          >
-            {slide.title}
-          </div>
-        )}
         {slide.bodyLines.map((line, i) => (
           <p
             key={i}
-            className="font-semibold leading-relaxed"
-            style={{ color: "#fff", fontSize: displaySettings.fontSize }}
+            className="font-extrabold leading-tight"
+            style={{
+              color: "rgba(255,255,255,0.95)",
+              fontSize: displaySettings.fontSize,
+              textShadow: "0 4px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)",
+            }}
           >
             {line}
           </p>
         ))}
+
+        {/* Reference with decorative lines */}
+        {slide.reference && (
+          <div className="flex items-center gap-4 mt-8" style={{ justifyContent: displaySettings.fontAlign === "left" ? "flex-start" : displaySettings.fontAlign === "right" ? "flex-end" : "center" }}>
+            <div className="w-8 h-px" style={{ background: "hsl(40, 90%, 52%)" }} />
+            <span
+              className="font-bold uppercase tracking-[0.2em]"
+              style={{
+                color: "hsl(40, 90%, 52%)",
+                fontSize: Math.round(displaySettings.fontSize * 0.4),
+              }}
+            >
+              {slide.reference}
+            </span>
+            <div className="w-8 h-px" style={{ background: "hsl(40, 90%, 52%)" }} />
+          </div>
+        )}
+
+        {slide.title && (
+          <div
+            className="font-semibold mt-2 uppercase tracking-wider"
+            style={{ color: "rgba(255,255,255,0.4)", fontSize: Math.round(displaySettings.fontSize * 0.35) }}
+          >
+            {slide.title}
+          </div>
+        )}
       </div>
 
-      {/* AmboPro Watermark */}
-      <div className="absolute bottom-6 right-8 z-20 select-none pointer-events-none flex items-center gap-2">
-        <img src="/favicon.png" alt="" className="h-6 w-6 object-contain" style={{ opacity: 0.18 }} />
+      {/* AmboPro Watermark - top left */}
+      <div className="absolute top-6 left-8 z-20 select-none pointer-events-none">
+        <div
+          style={{
+            fontSize: "16px",
+            fontWeight: 800,
+            letterSpacing: "0.12em",
+            color: "rgba(255, 255, 255, 0.15)",
+            textTransform: "uppercase",
+          }}
+        >
+          AMBOPRO
+        </div>
+        <div
+          style={{
+            fontSize: "9px",
+            fontWeight: 600,
+            letterSpacing: "0.2em",
+            color: "rgba(255, 255, 255, 0.1)",
+            textTransform: "uppercase",
+          }}
+        >
+          SANCTUARY LIVE
+        </div>
+      </div>
+
+      {/* ON-AIR indicator - top right */}
+      <div className="absolute top-6 right-8 z-20 select-none pointer-events-none flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full" style={{ background: "rgba(80, 200, 120, 0.5)" }} />
         <span
           style={{
-            fontSize: "28px",
-            fontWeight: 900,
+            fontSize: "11px",
+            fontWeight: 700,
             letterSpacing: "0.15em",
             color: "rgba(255, 255, 255, 0.12)",
             textTransform: "uppercase",
           }}
         >
-          AmboPro
+          ON-AIR
         </span>
       </div>
     </div>
