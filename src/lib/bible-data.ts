@@ -246,33 +246,32 @@ function normalizeOrdinals(text: string): string {
 export function parseBibleReference(text: string): BibleReference | null {
   const t = text.toLowerCase().trim();
 
-  // Pattern: "book chapter:verseStart-verseEnd" or "book chapter verse X" or "book chapter:verse"
-  // Also handle spoken: "book chapter verse X through Y"
   const patterns = [
-    // "john 3:16-18" or "john 3:16"
     /^(.+?)\s+(\d+)\s*:\s*(\d+)\s*[-–to]+\s*(\d+)/,
     /^(.+?)\s+(\d+)\s*:\s*(\d+)/,
-    // "john chapter 3 verse 16 through 18"
     /^(.+?)\s+(?:chapter\s+)?(\d+)\s+verse[s]?\s+(\d+)\s+(?:through|to|thru|-)\s+(\d+)/,
-    // "john chapter 3 verse 16"
     /^(.+?)\s+(?:chapter\s+)?(\d+)\s+verse[s]?\s+(\d+)/,
-    // "john 3" (whole chapter)
     /^(.+?)\s+(\d+)$/,
   ];
 
-  for (const pat of patterns) {
-    const m = t.match(pat);
-    if (!m) continue;
-    const bookRaw = m[1].trim();
-    const chapter = parseInt(m[2]);
-    const verseStart = m[3] ? parseInt(m[3]) : 1;
-    const verseEnd = m[4] ? parseInt(m[4]) : undefined;
+  // Try original text first, then normalized ordinals
+  const variants = [t, normalizeOrdinals(t)];
 
-    // Resolve book name
-    const bookName = BOOK_ALIASES[bookRaw];
-    if (!bookName) continue;
+  for (const variant of variants) {
+    for (const pat of patterns) {
+      const m = variant.match(pat);
+      if (!m) continue;
+      const bookRaw = m[1].trim();
+      const chapter = parseInt(m[2]);
+      const verseStart = m[3] ? parseInt(m[3]) : 1;
+      const verseEnd = m[4] ? parseInt(m[4]) : undefined;
 
-    return { book: bookName, chapter, verseStart, verseEnd };
+      // Try direct alias lookup, then with normalized ordinals
+      const bookName = BOOK_ALIASES[bookRaw] || BOOK_ALIASES[normalizeOrdinals(bookRaw).replace(/^(\d)\s+/, "$1 ")];
+      if (!bookName) continue;
+
+      return { book: bookName, chapter, verseStart, verseEnd };
+    }
   }
   return null;
 }
