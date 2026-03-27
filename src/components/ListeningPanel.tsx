@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
-import { Mic, MicOff, Volume2, Zap } from "lucide-react";
+import { Mic, MicOff, Zap, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useAIScriptureDetection } from "@/hooks/use-ai-scripture-detection";
 import { detectReferencesInText, getVersesByReference, loadBible, type BibleReference } from "@/lib/bible-data";
 import { useProjection } from "@/contexts/ProjectionContext";
 
@@ -32,19 +33,59 @@ function detectVoiceCommand(text: string): string | null {
   return null;
 }
 
+interface DetectedRef {
+  ref: BibleReference;
+  text: string;
+  time: Date;
+  source: "regex" | "ai";
+  reason?: string;
+}
+
 export function ListeningPanel() {
-  const [detectedRefs, setDetectedRefs] = useState<{ ref: BibleReference; text: string; time: Date }[]>([]);
+  const [detectedRefs, setDetectedRefs] = useState<DetectedRef[]>([]);
   const [commandLog, setCommandLog] = useState<{ cmd: string; time: Date }[]>([]);
   const [bibleReady, setBibleReady] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(true);
   const { goLiveScripture, nextVerse, prevVerse, goBlack } = useProjection();
 
   useEffect(() => {
     loadBible().then(() => setBibleReady(true));
   }, []);
 
+  // Track already-projected references to avoid duplicates
+  const projectedKeysRef = useState(() => new Set<string>())[0];
+
+  const makeRefKey = (ref: BibleReference) =>
+    `${ref.book}:${ref.chapter}:${ref.verseStart}`;
+
+  // AI detection callback
+  const handleAIDetected = useCallback((ref: BibleReference, reason: string) => {
+    const key = makeRefKey(ref);
+    if (projectedKeysRef.has(key)) return; // Already projected by regex
+    projectedKeysRef.add(key);
+    // Clear old keys after 60s
+    setTimeout(() => projectedKeysRef.delete(key), 60000);
+
+    const verses = getVersesByReference(ref);
+    if (verses.length === 0) return;
+
+    setDetectedRefs((prev) => [
+      ...prev.slice(-9),
+      { ref, text: verses[0].text.slice(0, 80), time: new Date(), source: "ai", reason },
+    ]);
+    goLiveScripture(ref);
+  }, [goLiveScripture, projectedKeysRef]);
+
+  const { addTranscript: addToAI } = useAIScriptureDetection({
+    enabled: aiEnabled && bibleReady,
+    onDetected: handleAIDetected,
+    debounceMs: 400,
+  });
+
   const handleTranscript = useCallback((text: string) => {
     if (!bibleReady) return;
 
+    // Voice commands
     const cmd = detectVoiceCommand(text);
     if (cmd) {
       setCommandLog((prev) => [...prev.slice(-4), { cmd, time: new Date() }]);
@@ -55,16 +96,26 @@ export function ListeningPanel() {
       }
     }
 
+    // Layer 1: Instant regex detection → auto-project
     const refs = detectReferencesInText(text);
-    if (refs.length === 0) return;
-
     for (const ref of refs) {
       const verses = getVersesByReference(ref);
       if (verses.length === 0) continue;
-      setDetectedRefs((prev) => [...prev.slice(-9), { ref, text: verses[0].text.slice(0, 80), time: new Date() }]);
+
+      const key = makeRefKey(ref);
+      projectedKeysRef.add(key);
+      setTimeout(() => projectedKeysRef.delete(key), 60000);
+
+      setDetectedRefs((prev) => [
+        ...prev.slice(-9),
+        { ref, text: verses[0].text.slice(0, 80), time: new Date(), source: "regex" },
+      ]);
       goLiveScripture(ref);
     }
-  }, [bibleReady, goLiveScripture, nextVerse, prevVerse, goBlack]);
+
+    // Layer 2: Send to AI for contextual detection (debounced)
+    addToAI(text);
+  }, [bibleReady, goLiveScripture, nextVerse, prevVerse, goBlack, addToAI, projectedKeysRef]);
 
   const { isListening, transcript, interimTranscript, startListening, stopListening, isSupported } = useSpeechRecognition(handleTranscript);
 
@@ -89,7 +140,7 @@ export function ListeningPanel() {
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <span className="text-[10px] text-success font-bold uppercase tracking-wider">Active Listening</span>
+              <span className="text-[10px] text-success font-bold uppercase tracking-wider">Active</span>
             </span>
           </div>
         )}
@@ -99,12 +150,12 @@ export function ListeningPanel() {
         <p className="text-[11px] text-muted-foreground">Real-time intelligent transcription listener</p>
       </div>
 
-      {/* Start/Stop Button */}
-      <div className="px-3 py-2">
+      {/* Start/Stop + AI Toggle */}
+      <div className="px-3 py-2 flex gap-2">
         {!isListening ? (
           <Button
             size="sm"
-            className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-10 rounded-lg"
+            className="flex-1 gap-2 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-10 rounded-lg"
             onClick={startListening}
           >
             <Mic className="w-4 h-4" /> Start Listening
@@ -113,13 +164,32 @@ export function ListeningPanel() {
           <Button
             size="sm"
             variant="outline"
-            className="w-full gap-2 h-10 rounded-lg border-border"
+            className="flex-1 gap-2 h-10 rounded-lg border-border"
             onClick={stopListening}
           >
-            <MicOff className="w-4 h-4" /> Stop Listening
+            <MicOff className="w-4 h-4" /> Stop
           </Button>
         )}
+        <Button
+          size="sm"
+          variant={aiEnabled ? "default" : "outline"}
+          className={`h-10 rounded-lg px-3 ${aiEnabled ? "bg-accent text-accent-foreground" : "border-border"}`}
+          onClick={() => setAiEnabled(!aiEnabled)}
+          title={aiEnabled ? "AI detection active" : "AI detection off"}
+        >
+          <Brain className="w-4 h-4" />
+        </Button>
       </div>
+
+      {/* AI status indicator */}
+      {aiEnabled && (
+        <div className="px-3 pb-1">
+          <div className="text-[9px] text-muted-foreground bg-accent/10 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+            <Brain className="w-3 h-3 text-accent-foreground/60" />
+            <span><span className="font-bold text-accent-foreground/70">AI Layer</span> — contextual detection active (~400ms)</span>
+          </div>
+        </div>
+      )}
 
       {/* Voice commands */}
       <div className="px-3 pb-2">
@@ -172,12 +242,24 @@ export function ListeningPanel() {
               onClick={() => goLiveScripture(d.ref)}
             >
               <div className="flex items-center gap-2 mb-1">
-                <Zap className="w-3.5 h-3.5 text-primary shrink-0" />
+                {d.source === "ai" ? (
+                  <Brain className="w-3.5 h-3.5 text-accent-foreground shrink-0" />
+                ) : (
+                  <Zap className="w-3.5 h-3.5 text-primary shrink-0" />
+                )}
                 <span className={`text-xs font-bold uppercase ${i === 0 ? "text-primary" : "text-foreground"}`}>
                   {d.ref.book} {d.ref.chapter}:{d.ref.verseStart}
-                  {d.ref.verseEnd ? `-${d.ref.verseEnd}` : ""} DETECTED
+                  {d.ref.verseEnd ? `-${d.ref.verseEnd}` : ""}
+                </span>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                  d.source === "ai" ? "bg-accent/20 text-accent-foreground" : "bg-primary/20 text-primary"
+                }`}>
+                  {d.source === "ai" ? "AI" : "REGEX"}
                 </span>
               </div>
+              {d.reason && (
+                <p className="text-[9px] text-muted-foreground pl-5 mb-0.5 italic">{d.reason}</p>
+              )}
               <p className="text-[11px] text-muted-foreground leading-relaxed pl-5">
                 "{d.text}..."
               </p>
