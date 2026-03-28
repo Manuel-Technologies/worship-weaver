@@ -225,6 +225,35 @@ const BOOK_ALIASES: Record<string, string> = {
   "rev": "Revelation", "revelation": "Revelation", "revelations": "Revelation",
 };
 
+// Spoken number words → digits
+const SPOKEN_NUMBERS: Record<string, number> = {
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17,
+  eighteen: 18, nineteen: 19, twenty: 20, "twenty one": 21, "twenty two": 22, "twenty three": 23,
+  "twenty four": 24, "twenty five": 25, "twenty six": 26, "twenty seven": 27, "twenty eight": 28,
+  "twenty nine": 29, thirty: 30, "thirty one": 31, "thirty two": 32, "thirty three": 33,
+  "thirty four": 34, "thirty five": 35, "thirty six": 36, forty: 40, fifty: 50,
+  "forty one": 41, "forty two": 42, "forty three": 43, "forty four": 44, "forty five": 45,
+  "forty six": 46, "forty seven": 47, "forty eight": 48, "forty nine": 49,
+  "fifty one": 51, "fifty two": 52, "fifty three": 53, "fifty four": 54, "fifty five": 55,
+  "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90, "hundred": 100,
+  "one hundred": 100, "one hundred and one": 101, "one hundred and fifty": 150,
+};
+
+/**
+ * Replace spoken number words with digits in text.
+ */
+function spokenNumbersToDigits(text: string): string {
+  let result = text;
+  // Sort by length descending so "twenty one" matches before "twenty"
+  const sorted = Object.keys(SPOKEN_NUMBERS).sort((a, b) => b.length - a.length);
+  for (const word of sorted) {
+    const re = new RegExp(`\\b${word}\\b`, "gi");
+    result = result.replace(re, String(SPOKEN_NUMBERS[word]));
+  }
+  return result;
+}
+
 /**
  * Normalize ordinal prefixes in text for better speech recognition matching.
  * Converts "1st" → "1", "2nd" → "2", "3rd" → "3" and word ordinals.
@@ -240,22 +269,56 @@ function normalizeOrdinals(text: string): string {
 }
 
 /**
+ * Normalize speech artifacts and filler patterns.
+ */
+function normalizeSpeech(text: string): string {
+  return text
+    // Remove common filler/cue words
+    .replace(/\b(?:the\s+book\s+of|the\s+gospel\s+(?:of|according\s+to)|the\s+epistle\s+(?:of|to)|the\s+letter\s+(?:of|to))\s+/gi, "")
+    // "chapter X and verse Y" → "chapter X verse Y"
+    .replace(/\bchapter\s+(\d+)\s+and\s+verse/gi, "chapter $1 verse")
+    // "verses X and Y" → "verses X to Y" (for ranges)
+    .replace(/\bverse[s]?\s+(\d+)\s+and\s+(\d+)/gi, "verses $1 to $2")
+    // "from verse X to Y" → "verses X to Y"
+    .replace(/\bfrom\s+verse\s+/gi, "verses ")
+    // "reading from" → ""
+    .replace(/\breading\s+from\s+/gi, "")
+    // Remove "says" or "said" after reference context
+    .replace(/\b(?:says?|said)\s+/gi, "")
+    .trim();
+}
+
+/**
  * Parse a spoken or typed Bible reference string.
- * Handles patterns like "John 3:16", "first corinthians 13 verse 4", "Psalm 23 verses 1 through 6"
+ * Handles patterns like "John 3:16", "first corinthians 13 verse 4",
+ * "Psalm 23 verses 1 through 6", "John chapter three verse sixteen"
  */
 export function parseBibleReference(text: string): BibleReference | null {
-  const t = text.toLowerCase().trim();
+  let t = text.toLowerCase().trim();
 
   const patterns = [
+    // "John 3:16-18"
     /^(.+?)\s+(\d+)\s*:\s*(\d+)\s*[-–to]+\s*(\d+)/,
+    // "John 3:16"
     /^(.+?)\s+(\d+)\s*:\s*(\d+)/,
-    /^(.+?)\s+(?:chapter\s+)?(\d+)\s+verse[s]?\s+(\d+)\s+(?:through|to|thru|-)\s+(\d+)/,
+    // "John chapter 3 verses 16 through 18"
+    /^(.+?)\s+(?:chapter\s+)?(\d+)\s+verse[s]?\s+(\d+)\s+(?:through|to|thru|[-–])\s+(\d+)/,
+    // "John chapter 3 verse 16"
     /^(.+?)\s+(?:chapter\s+)?(\d+)\s+verse[s]?\s+(\d+)/,
-    /^(.+?)\s+(\d+)$/,
+    // "John chapter 3 from 16 to 18"
+    /^(.+?)\s+(?:chapter\s+)?(\d+)\s+(?:from\s+)?(\d+)\s+(?:to|through|thru|[-–])\s+(\d+)/,
+    // "John 3" (chapter only)
+    /^(.+?)\s+(?:chapter\s+)?(\d+)$/,
   ];
 
-  // Try original text first, then normalized ordinals
-  const variants = [t, normalizeOrdinals(t)];
+  // Build variants: original, ordinal-normalized, spoken-numbers-replaced, both
+  const v1 = t;
+  const v2 = normalizeOrdinals(t);
+  const v3 = spokenNumbersToDigits(t);
+  const v4 = spokenNumbersToDigits(normalizeOrdinals(t));
+  const v5 = normalizeSpeech(v1);
+  const v6 = normalizeSpeech(v4);
+  const variants = [...new Set([v1, v2, v3, v4, v5, v6])];
 
   for (const variant of variants) {
     for (const pat of patterns) {
@@ -266,8 +329,20 @@ export function parseBibleReference(text: string): BibleReference | null {
       const verseStart = m[3] ? parseInt(m[3]) : 1;
       const verseEnd = m[4] ? parseInt(m[4]) : undefined;
 
-      // Try direct alias lookup, then with normalized ordinals
-      const bookName = BOOK_ALIASES[bookRaw] || BOOK_ALIASES[normalizeOrdinals(bookRaw).replace(/^(\d)\s+/, "$1 ")];
+      // Try alias lookups with various normalizations
+      const bookCandidates = [
+        bookRaw,
+        normalizeOrdinals(bookRaw).replace(/^(\d)\s+/, "$1 "),
+        bookRaw.replace(/^the\s+/, ""),
+        normalizeSpeech(bookRaw),
+      ];
+      let bookName: string | undefined;
+      for (const candidate of bookCandidates) {
+        if (BOOK_ALIASES[candidate]) {
+          bookName = BOOK_ALIASES[candidate];
+          break;
+        }
+      }
       if (!bookName) continue;
 
       return { book: bookName, chapter, verseStart, verseEnd };
@@ -276,26 +351,76 @@ export function parseBibleReference(text: string): BibleReference | null {
   return null;
 }
 
+// All book names for building dynamic regex
+const ALL_BOOK_NAMES = [
+  "genesis", "exodus", "leviticus", "numbers", "deuteronomy",
+  "joshua", "judges", "ruth",
+  "(?:1|2|1st|2nd|first|second)\\s*samuel",
+  "(?:1|2|1st|2nd|first|second)\\s*kings",
+  "(?:1|2|1st|2nd|first|second)\\s*chronicles",
+  "ezra", "nehemiah", "esther", "job", "psalms?",
+  "proverbs", "ecclesiastes", "song\\s+of\\s+solomon",
+  "isaiah", "jeremiah", "lamentations", "ezekiel", "daniel",
+  "hosea", "joel", "amos", "obadiah", "jonah", "micah",
+  "nahum", "habakkuk", "zephaniah", "haggai", "zechariah", "malachi",
+  "matthew", "mark", "luke", "john", "acts", "romans",
+  "(?:1|2|1st|2nd|first|second)\\s*corinthians",
+  "galatians", "ephesians", "philippians", "colossians",
+  "(?:1|2|1st|2nd|first|second)\\s*thessalonians",
+  "(?:1|2|1st|2nd|first|second)\\s*timothy",
+  "titus", "philemon", "hebrews", "james",
+  "(?:1|2|1st|2nd|first|second)\\s*peter",
+  "(?:1|2|3|1st|2nd|3rd|first|second|third)\\s*john",
+  "jude", "revelations?",
+];
+
+const BOOK_PATTERN = ALL_BOOK_NAMES.join("|");
+
 /**
  * Detect Bible references in transcribed speech text.
- * Returns all references found in the text.
+ * Handles explicit mentions, cue phrases, and various spoken formats.
  */
 export function detectReferencesInText(text: string): BibleReference[] {
   const refs: BibleReference[] = [];
-  const t = text.toLowerCase();
+  const seen = new Set<string>();
 
-  // Try to find patterns like "turn to John 3:16" or "let's read Psalm 23"
-  const cuePatterns = [
-    /(?:turn\s+to|go\s+to|let'?s?\s+read|open\s+(?:your\s+)?(?:bibles?\s+to)?|look\s+at|read(?:ing)?\s+from|in)\s+(.+?)(?:\.|,|$)/gi,
-    // Direct reference pattern
-    /(\b(?:genesis|exodus|leviticus|numbers|deuteronomy|joshua|judges|ruth|(?:1|2|1st|2nd|first|second)\s*samuel|(?:1|2|1st|2nd|first|second)\s*kings|(?:1|2|1st|2nd|first|second)\s*chronicles|ezra|nehemiah|esther|job|psalms?|proverbs|ecclesiastes|song\s+of\s+solomon|isaiah|jeremiah|lamentations|ezekiel|daniel|hosea|joel|amos|obadiah|jonah|micah|nahum|habakkuk|zephaniah|haggai|zechariah|malachi|matthew|mark|luke|john|acts|romans|(?:1|2|1st|2nd|first|second)\s*corinthians|galatians|ephesians|philippians|colossians|(?:1|2|1st|2nd|first|second)\s*thessalonians|(?:1|2|1st|2nd|first|second)\s*timothy|titus|philemon|hebrews|james|(?:1|2|1st|2nd|first|second)\s*peter|(?:1|2|3|1st|2nd|3rd|first|second|third)\s*john|jude|revelations?)\s+\d+(?:\s*:\s*\d+(?:\s*[-–to]+\s*\d+)?)?)/gi,
-  ];
+  // Normalize the input
+  let t = text.toLowerCase();
+  // Pre-process: convert spoken numbers in verse/chapter positions
+  const tNorm = spokenNumbersToDigits(normalizeOrdinals(normalizeSpeech(t)));
 
-  for (const pat of cuePatterns) {
-    let match;
-    while ((match = pat.exec(t)) !== null) {
-      const ref = parseBibleReference(match[1] || match[0]);
-      if (ref) refs.push(ref);
+  // Multiple detection strategies
+  const allTexts = [...new Set([t, tNorm])];
+
+  for (const input of allTexts) {
+    const cuePatterns = [
+      // Cue phrases: "turn to John 3:16", "let's read Psalm 23", "we find in Romans 8:28"
+      /(?:turn\s+to|go\s+to|let'?s?\s+(?:read|look\s+at|open)|open\s+(?:your\s+)?(?:bibles?\s+to)?|look\s+at|read(?:ing)?\s+(?:from)?|(?:we\s+)?(?:find|see|read)\s+(?:it\s+)?in|it\s+says?\s+in|according\s+to|written\s+in|(?:the\s+)?book\s+of|(?:the\s+)?gospel\s+(?:of|according\s+to)|as\s+(?:recorded|written)\s+in)\s+(.+?)(?:\.|,|;|!|\?|$)/gi,
+      // Direct reference: "John 3:16", "1 Kings 19:12", "Psalm 23 verse 1"
+      new RegExp(
+        `(\\b(?:${BOOK_PATTERN})\\s+(?:chapter\\s+)?\\d+(?:\\s*:\\s*\\d+(?:\\s*[-–]\\s*\\d+)?|\\s+verse[s]?\\s+\\d+(?:\\s+(?:through|to|thru|[-–])\\s+\\d+)?)?)`,
+        "gi"
+      ),
+      // Chapter-only: "John 3", "Psalm 23"
+      new RegExp(
+        `(\\b(?:${BOOK_PATTERN})\\s+(?:chapter\\s+)?\\d+)\\b`,
+        "gi"
+      ),
+    ];
+
+    for (const pat of cuePatterns) {
+      let match;
+      while ((match = pat.exec(input)) !== null) {
+        const raw = match[1] || match[0];
+        const ref = parseBibleReference(raw);
+        if (ref) {
+          const key = `${ref.book}:${ref.chapter}:${ref.verseStart}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            refs.push(ref);
+          }
+        }
+      }
     }
   }
 
