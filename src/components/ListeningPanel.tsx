@@ -117,7 +117,7 @@ export function ListeningPanel() {
     addToAI(text);
   }, [bibleReady, goLiveScripture, nextVerse, prevVerse, goBlack, addToAI, projectedKeysRef]);
 
-  const { isListening, transcript, interimTranscript, startListening, stopListening, isSupported } = useSpeechRecognition(handleTranscript);
+  const { isListening, transcript, interimTranscript, startListening, stopListening, isSupported, provider } = useDeepgramRecognition(handleTranscript);
 
   if (!isSupported) {
     return (
