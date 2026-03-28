@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Mic, MicOff, Zap, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useDeepgramRecognition } from "@/hooks/use-deepgram-recognition";
 import { useAIScriptureDetection } from "@/hooks/use-ai-scripture-detection";
 import { detectReferencesInText, getVersesByReference, loadBible, type BibleReference } from "@/lib/bible-data";
 import { useProjection } from "@/contexts/ProjectionContext";
@@ -117,7 +117,7 @@ export function ListeningPanel() {
     addToAI(text);
   }, [bibleReady, goLiveScripture, nextVerse, prevVerse, goBlack, addToAI, projectedKeysRef]);
 
-  const { isListening, transcript, interimTranscript, startListening, stopListening, isSupported } = useSpeechRecognition(handleTranscript);
+  const { isListening, transcript, interimTranscript, startListening, stopListening, isSupported, provider } = useDeepgramRecognition(handleTranscript);
 
   if (!isSupported) {
     return (
@@ -140,7 +140,9 @@ export function ListeningPanel() {
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <span className="text-[10px] text-success font-bold uppercase tracking-wider">Active</span>
+              <span className="text-[10px] text-success font-bold uppercase tracking-wider">
+                {provider === "deepgram" ? "Deepgram" : "Browser"}
+              </span>
             </span>
           </div>
         )}
