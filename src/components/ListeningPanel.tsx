@@ -140,7 +140,9 @@ export function ListeningPanel() {
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <span className="text-[10px] text-success font-bold uppercase tracking-wider">Active</span>
+              <span className="text-[10px] text-success font-bold uppercase tracking-wider">
+                {provider === "deepgram" ? "Deepgram" : "Browser"}
+              </span>
             </span>
           </div>
         )}
