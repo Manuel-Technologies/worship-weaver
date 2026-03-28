@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Mic, MicOff, Zap, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useDeepgramRecognition } from "@/hooks/use-deepgram-recognition";
 import { useAIScriptureDetection } from "@/hooks/use-ai-scripture-detection";
 import { detectReferencesInText, getVersesByReference, loadBible, type BibleReference } from "@/lib/bible-data";
 import { useProjection } from "@/contexts/ProjectionContext";
